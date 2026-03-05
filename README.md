@@ -1,92 +1,132 @@
-# GPU-Profiler
-Managing resources on a hybrid graphics laptop (AMD/Intel + NVIDIA) in a Linux environment can be a bottleneck for cybersecurity tasks. I created this repository because I was facing several challenges
+#  z0n GPU Profiler 
 
-This documentation is designed to be the definitive guide for your GitHub repository, **PowerProfile**. It reflects your professional role as a **SOC Analyst** and your expertise in both **Red and Blue team operations**.
+The **z0n GPU Profiler** is a specialized system utility developed for Linux environments (specifically optimized for Kali Linux on hybrid-graphics hardware). It provides a high-fidelity "cockpit" for managing **NVIDIA PRIME Render Offloading**, allowing for real-time telemetry and the targeted execution of security tools on dedicated hardware.
 
----
+![GPU](htb_UI.png)
 
-# z0n // Power Profile Dashboard
+##  System Architecture & Logic
 
-### High-Performance GPU Orchestration & System Telemetry for Kali Linux
-
-**Power Profile** is an aesthetic, high-performance hardware management interface developed to solve the "Idle GPU" problem on hybrid-graphics laptops (AMD/Intel + NVIDIA). By leveraging **PRIME Render Offloading**, this tool allows you to bypass integrated graphics and force-inject the power of your **NVIDIA RTX 5060** into specific cybersecurity workflows—all through a modern, BMW M-Power inspired dashboard.
-
----
-
-##  The Problem & Vision
-
-As a **SOC Analyst** working with a **Lenovo LOQ** (AMD Radeon 780M + NVIDIA RTX 5060), I identified a significant efficiency gap in standard Linux distributions:
-
-* **NVIDIA Under-utilization:** Critical tasks like hash cracking or VM rendering were defaulting to integrated graphics, leaving the dedicated GPU at 0%.
-* **Execution Friction:** Manually typing environment variables for every tool was slow and prone to error.
-* **Visual Blindness:** Existing monitors didn't provide the "at-a-glance" telemetry needed during high-load operations.
-
-**Power Profile** provides a unified "Cockpit" to solve these issues, specifically optimized for **X11 environments** and the **Kali Linux** ecosystem.
-
----
-
-##  Key Features
-
-### 1. Dual-Path Execution Engine
-
-* **Module 01: GUI Binary Mode**
-* Designed for standalone applications like **VMware Workstation** or **Burp Suite**.
-* Launches processes silently in the background with GPU injection.
+The application serves as a high-level wrapper for the **NVIDIA Optimus** and **PRIME** protocols. It interacts directly with the Linux kernel and the NVIDIA binary driver to steer graphics and compute contexts.
 
 
-* **Module 02: Terminal Override (CLI)**
-* Designed for offensive tools like **Hashcat** or **Nmap**.
-* Spawns a dedicated terminal window and persists after execution for log analysis.
+### 1. Execution Steering Logic
+
+The core of the application lies in its environment variable injection. When the **NVIDIA Engine** is toggled, the application wraps the target binary in a sub-shell with the following variables:
+
+| Variable                    | Value         | Functional Purpose                                                                                                                                                   |
+| :-- | : | :- |
+| `__NV_PRIME_RENDER_OFFLOAD` | `1`           | Signals the X-server to use **PRIME render offloading**, allowing the discrete GPU (dGPU) to handle rendering tasks while the integrated GPU manages display output. |
+| `__GLX_VENDOR_LIBRARY_NAME` | `nvidia`      | Forces the GLX dispatcher to load the **NVIDIA OpenGL vendor library**, ensuring OpenGL applications utilize the NVIDIA driver instead of Mesa or other vendors.     |
+| `__VK_LAYER_NV_optimus`     | `NVIDIA_only` | Directs **Vulkan API calls** through the NVIDIA Optimus layer so that rendering is executed exclusively on the discrete GPU.                                         |
+
+
+### 2. Dual-Stream Execution Modules
+
+* **Module 01 (GUI):** Uses `subprocess.Popen` with `stderr=subprocess.DEVNULL`. This allows GUI tools like **VMware** or **Burp Suite** to run independently of the dashboard without hanging the main thread.
+* **Module 02 (CLI):** Wraps the payload in `x-terminal-emulator`. It forces a `bash` context and uses `exec bash` at the end of the string to ensure the terminal window persists after the process crashes or terminates—essential for reviewing **Hashcat** or **Nmap** outputs.
 
 
 
-### 2. Real-Time M-Power Telemetry
+##  Telemetry Engine (Hardware Monitoring)
 
-* **Circular Analog Gauges:** Features custom-drawn Python/Tkinter gauges inspired by automotive performance clusters.
-* **Kernel-Level Monitoring:** Queries `/sys/class/drm/` for AMD and `nvidia-smi` for NVIDIA to provide sub-second accuracy.
-* **Dynamic Load Warning:** Gauges shift from Neon Cyan to Warning Crimson when utilization exceeds **85%**.
+The dashboard uses a dual-source polling engine to provide sub-second telemetry without high CPU overhead.
 
-### 3. Smart History & Favorites
+### NVIDIA Polling (dGPU)
 
-* **Persistence:** Remembers your 10 most-used binaries and commands via `z0n_launcher_favorites.json`.
-* **Native Integration:** Uses **Zenity** to invoke the modern OS file manager for binary selection.
+The system invokes the `nvidia-smi` binary with specific query flags:
+`nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits`
+This returns a raw integer which is then mapped to the BMW M-Power circular gauges.
 
----
+### AMD Polling (iGPU)
 
-##  Installation
+The system bypasses heavy binaries and reads directly from the **Linux sysfs virtual filesystem**. It polls:
+`/sys/class/drm/card0/device/gpu_busy_percent`
+This direct kernel-read method ensures the dashboard remains lightweight.
 
-### Prerequisites
 
-* **Kali Linux** (or any Debian-based rolling release).
-* **NVIDIA Proprietary Drivers** (v535+).
-* **X11 Display Server** (Wayland is currently unsupported).
 
-### Setup
+##  UI & UX Design (M-Performance Aesthetic)
+
+The interface is built using **CustomTkinter** for high-DPI scaling and modern styling.
+
+* **Circular Gauges:** Custom-drawn `tk.Canvas` elements using trigonometry ($cos/sin$ math) to map percentages to degree angles ($225^\circ$ to $-45^\circ$).
+* **Dynamic Colors:** The needle and digital readouts use a threshold logic. When utilization $> 85\%$, the HEX color code shifts from **Neon Cyan** (`#3399FF`) to **M-Performance Crimson** (`#FF4400`).
+* **Native Hooks:** Uses **Zenity** (`/usr/bin/zenity`) to provide a GTK-based file manager experience, allowing for native search and autocomplete that standard Python dialogs lack.
+
+
+
+# System Integration: File Management & Terminal Logic
+
+The **z0n GPU Profiler** is engineered to behave as a native extension of the Kali Linux ecosystem. By hooking into existing system binaries rather than relying on standard Python libraries, it provides a high-performance workflow optimized for SOC and Red Team operations.
+
+
+
+##  Modern File Management (Zenity Hook)
+
+Standard Python file dialogs (`tkinter.filedialog`) are often functionally "blind"—they lack the indexing, search, and navigation capabilities required for rapid binary selection in a complex filesystem. This project bypasses those limitations by utilizing a **Zenity-driven GTK interface**.
+
+![GPU](htb_File_manger.png)
+
+
+### Key Capabilities:
+
+* **Global Search:** Users can trigger `Ctrl+F` within the picker to instantly locate binaries deep within `/usr/bin/`, `/opt/`, or local project directories.
+* **Path Autocomplete:** Supports native predictive typing, allowing for rapid navigation through the Linux directory structure without manual clicking.
+* **Native Sidebar Access:** Provides immediate access to system-level shortcuts like `Home`, `Recent`, and `File System`, which are typically stripped in basic Python-based dialogs.
+* **State Persistence:** Once a binary is selected, the path is automatically sanitized and cached in `z0n_launcher_favorites.json`. This creates a persistent "State Machine" that remembers your most critical tools across reboots.
+
+
+
+##  Persistent Terminal Override (Module 02)
+
+When executing CLI-based payloads—such as **Hashcat**, **Nmap**, or custom exploitation scripts—visual feedback and log persistence are mandatory. The **Terminal Override** module ensures that no output is lost, even if a process terminates abruptly.
+
+![GPU](htb_CMD.png)
+
+### Technical Implementation:
+
+The dashboard constructs a specialized execution string passed to the system's `x-terminal-emulator`. This ensures that your preferred terminal (QTerminal, XFCE4-Terminal, etc.) is used.
+
+**The Command Wrapper Logic:**
 
 ```bash
-# Clone the Core
-git clone https://github.com/0x0z0n/PowerProfile.git
-cd PowerProfile
-
-# Install UI & System Hooks
-pip install customtkinter
-sudo apt update && sudo apt install zenity mesa-utils nvtop -y
-
-# Launch Protocol
-python3 Powerprofile.py
+x-terminal-emulator -e bash -c "<GPU_ENV_VARS> <USER_COMMAND>; echo; echo '[PROCESS TERMINATED]'; exec bash"
 
 ```
 
----
+### Why this is critical :
 
-##  Technical Core
+1. **Environment Injection:** It injects NVIDIA PRIME variables (`__NV_PRIME_RENDER_OFFLOAD=1`) *inside* the terminal session, ensuring the CLI tool explicitly recognizes the RTX 5060.
+2. **Output Persistence:** By appending `exec bash`, the terminal window **stays open** after the command finishes. This allows you to review terminal output, copy-paste hashes, or analyze error logs without the window auto-closing.
+3. **Independent Threading:** Utilizes `subprocess.Popen` to ensure the Terminal remains a detached child process, preventing the main M-Power Dashboard from hanging during long-running compute tasks.
 
-The engine operates by wrapping execution strings with specific environment variables before passing them to the `/bin/bash` sub-shell:
 
-| Mode | Environment Variables Injected |
-| --- | --- |
-| **NVIDIA (dGPU)** | `__NV_PRIME_RENDER_OFFLOAD=1` `__GLX_VENDOR_LIBRARY_NAME=nvidia` |
-| **Integrated (iGPU)** | Default System Path (No injection) |
 
-> **Note:** For VMware users, this tool automatically works with the `mks.gl.allowBlacklistedDrivers = "TRUE"` preference to ensure 3D acceleration is never dropped.
+##  State Machine (JSON History)
 
+The "Favorites" system acts as a lightweight, flat-file database for your workflow.
+
+| Feature               | Logic                                                                                                        |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **Auto-Cache**        | Stores the **last 10 unique and successfully executed binary selections** for quick reuse.                   |
+| **Path Sanitization** | Automatically escapes and handles **spaces and shell-sensitive characters** within file paths.               |
+| **Real-time Sync**    | The UI `CTkComboBox` **refreshes its values instantly** whenever a new binary target is selected and locked. |
+
+
+
+
+##  File Structure & State Management
+
+| File                          | Description                                                                                                     |
+| :---------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| `Powerprofile.py`             | Main Python application containing the **core logic and graphical user interface implementation**.              |
+| `z0n_launcher_favorites.json` | Local configuration file that stores the **10 most recently executed binary paths** for quick access and reuse. |
+
+
+##  Maintenance & Troubleshooting
+
+### Common Fixes:
+
+1. **"Zenity not found":** Ensure `sudo apt install zenity` is run; the "Browse" button depends on this system hook.
+2. **Telemetry at 0%:** Verify the NVIDIA drivers are loaded via `lsmod | grep nvidia`. If the driver is not active, `nvidia-smi` calls will fail.
+3. **Permission Denied:** Ensure the binaries you are trying to launch have the executable bit set (`chmod +x`).
