@@ -26,12 +26,21 @@ class GPULauncher(ctk.CTk):
         super().__init__()
 
         self.title("z0n // OVERRIDE PROTOCOL")
-        self.geometry("900x980") # Slightly taller to accommodate new flags
+        self.geometry("900x1120") # Taller to accommodate the Power Dynamics card
         self.resizable(False, False)
         self.configure(fg_color=BG_ABYSS)
 
         self.favorites = self.load_favorites()
         self.selected_app = self.favorites[0] if self.favorites else None
+
+        # --- POWER STATES DECK ---
+        self.power_modes = {
+            0: {"name": "ECO_STEALTH", "watts": 45, "color": SUCCESS_GREEN},
+            1: {"name": "NOMINAL_YIELD", "watts": 70, "color": CYAN_NEON},
+            2: {"name": "KINETIC_BURST", "watts": 95, "color": "#ffaa00"}, # Warning Orange
+            3: {"name": "OVERRIDE_MAX", "watts": 115, "color": CRIMSON_NEON}
+        }
+        self.current_power_index = 0
 
         # --- HEADER ---
         self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -138,6 +147,32 @@ class GPULauncher(ctk.CTk):
         self.mangohud_check.pack(pady=(0, 20), padx=25, anchor="w")
 
         # ==========================================
+        # POWER DYNAMICS (SLIDER CARD)
+        # ==========================================
+        self.power_frame = ctk.CTkFrame(self, fg_color=CARD_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=12)
+        self.power_frame.pack(pady=10, padx=40, fill="x")
+
+        self.power_header = ctk.CTkLabel(self.power_frame, text="// POWER DYNAMICS [ TGP LIMITER ]", font=("Monospace", 12, "bold"), text_color=MUTED_TEXT)
+        self.power_header.pack(pady=(15, 5), anchor="w", padx=20)
+
+        # Dynamic Status Label
+        self.power_status = ctk.CTkLabel(self.power_frame, text="[ ECO_STEALTH ] // 45W", font=("Monospace", 14, "bold"), text_color=SUCCESS_GREEN)
+        self.power_status.pack(pady=(5, 5))
+
+        # The Segmented Slider
+        self.power_slider = ctk.CTkSlider(self.power_frame, from_=0, to=3, number_of_steps=3, 
+                                          command=self.on_power_slide, 
+                                          button_color=SUCCESS_GREEN, progress_color=SUCCESS_GREEN, button_hover_color="#ffffff")
+        self.power_slider.set(0)
+        self.power_slider.pack(fill="x", padx=60, pady=(10, 15))
+
+        # Apply Button
+        self.apply_power_btn = ctk.CTkButton(self.power_frame, text="INJECT HARDWARE LIMIT", height=30, font=("Segoe UI", 11, "bold"),
+                                             command=self.apply_power_limit, fg_color=BG_ABYSS, border_width=1, 
+                                             border_color=BORDER_COLOR, hover_color="#222230", text_color=WHITE_TEXT)
+        self.apply_power_btn.pack(pady=(0, 15))
+
+        # ==========================================
         # TELEMETRY DASHBOARD (WIDE CARD)
         # ==========================================
         self.telemetry_frame = ctk.CTkFrame(self, fg_color=CARD_BG, border_width=1, border_color=BORDER_COLOR, corner_radius=12)
@@ -163,7 +198,7 @@ class GPULauncher(ctk.CTk):
         self.nv_label = ctk.CTkLabel(self.nv_row, text="dGPU // RTX 5060", font=FONT_MONO, text_color=WHITE_TEXT)
         self.nv_label.pack(side="left")
         
-        self.nv_stats = ctk.CTkLabel(self.nv_row, text="0°C | 0MB / 0MB", font=("Monospace", 10), text_color=MUTED_TEXT)
+        self.nv_stats = ctk.CTkLabel(self.nv_row, text="0°C | 0.0W | 0MB / 0MB", font=("Monospace", 10), text_color=MUTED_TEXT)
         self.nv_stats.pack(side="left", padx=15)
 
         self.nv_pct = ctk.CTkLabel(self.nv_row, text="0%", font=FONT_MONO, text_color=CYAN_NEON)
@@ -235,10 +270,43 @@ class GPULauncher(ctk.CTk):
         except FileNotFoundError:
             self.log("ERR: zenity not found. Run 'sudo apt install zenity'", is_error=True)
 
+    def on_power_slide(self, value):
+        # Cast the float value from the slider to an integer index (0, 1, 2, or 3)
+        index = int(value)
+        self.current_power_index = index
+        mode = self.power_modes[index]
+        
+        # Update UI text and color dynamically
+        self.power_status.configure(text=f"[ {mode['name']} ] // {mode['watts']}W", text_color=mode['color'])
+        self.power_slider.configure(button_color=mode['color'], progress_color=mode['color'])
+
+    def apply_power_limit(self):
+        target_watts = self.power_modes[self.current_power_index]["watts"]
+        mode_name = self.power_modes[self.current_power_index]["name"]
+        
+        self.log(f"INITIATING HARDWARE OVERRIDE -> {target_watts}W [{mode_name}]")
+        
+        # We use pkexec to trigger a native graphical sudo prompt for the user
+        cmd = ["pkexec", "nvidia-smi", "-pl", str(target_watts)]
+        
+        try:
+            # Run the command and capture output
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            self.log(f"SUCCESS: TGP LOCKED AT {target_watts}W.")
+        except subprocess.CalledProcessError as e:
+            # This triggers if the user clicks "Cancel" on the password prompt or if it fails
+            if e.returncode == 126 or e.returncode == 127:
+                self.log("ERR: AUTHENTICATION ABORTED BY USER.", is_error=True)
+            else:
+                self.log(f"FATAL: {e.output.decode('utf-8').strip()}", is_error=True)
+        except FileNotFoundError:
+            self.log("ERR: pkexec not found. Cannot elevate privileges.", is_error=True)
+
     def get_nvidia_telemetry(self):
         try:
+            # Added power.draw to the query string
             result = subprocess.check_output(
-                ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"], 
+                ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw", "--format=csv,noheader,nounits"], 
                 encoding="utf-8"
             ).strip().split(', ')
             
@@ -246,10 +314,11 @@ class GPULauncher(ctk.CTk):
                 "usage": int(result[0]),
                 "vram_used": int(result[1]),
                 "vram_total": int(result[2]),
-                "temp": int(result[3])
+                "temp": int(result[3]),
+                "power": float(result[4]) # Power draw returns as a float (e.g., 14.53)
             }
         except:
-            return {"usage": 0, "vram_used": 0, "vram_total": 0, "temp": 0}
+            return {"usage": 0, "vram_used": 0, "vram_total": 0, "temp": 0, "power": 0.0}
 
     def get_amd_usage(self):
         paths = ["/sys/class/drm/card0/device/gpu_busy_percent", 
@@ -268,7 +337,10 @@ class GPULauncher(ctk.CTk):
         amd_usage = self.get_amd_usage()
 
         self.nv_pct.configure(text=f"{nv_data['usage']}%")
-        self.nv_stats.configure(text=f"{nv_data['temp']}°C | {nv_data['vram_used']}MB / {nv_data['vram_total']}MB")
+        
+        # Injects the live power draw right between temp and VRAM
+        self.nv_stats.configure(text=f"{nv_data['temp']}°C | {nv_data['power']:.1f}W | {nv_data['vram_used']}MB / {nv_data['vram_total']}MB")
+        
         self.nv_gauge.set(nv_data['usage'] / 100.0)
         
         self.amd_pct.configure(text=f"{amd_usage}%")
