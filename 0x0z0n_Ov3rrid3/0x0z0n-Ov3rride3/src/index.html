@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>z0n // OVERRIDE</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>z0n // GPU_OVERRIDE</h1>
+    <div class="status-online">[ SYSTEM ONLINE ]</div>
+  </header>
+
+  <div class="card border-cyan">
+    <div class="card-header text-cyan">[01] GUI BINARY EXECUTION</div>
+    <div class="row">
+      <select id="app-combo" class="input-dark flex-grow"><option>None Selected</option></select>
+      <button id="btn-browse" class="btn btn-outline">BROWSE</button>
+      <button id="btn-launch-gui" class="btn btn-cyan text-black">LAUNCH BINARY</button>
+    </div>
+  </div>
+
+  <div class="card border-crimson">
+    <div class="card-header text-crimson">[02] TERMINAL PAYLOAD</div>
+    <div class="row">
+      <input type="text" id="cmd-entry" class="input-dark flex-grow text-crimson" placeholder="Enter raw command (e.g., hashcat -I)">
+      <button id="btn-launch-cmd" class="btn btn-crimson">OPEN TERMINAL</button>
+    </div>
+  </div>
+
+  <div class="row no-margin">
+    <div class="card flex-half">
+      <div class="card-header muted">// RENDERING ENGINE</div>
+      <label class="radio-label"><input type="radio" name="gpu" value="nvidia" checked> NVIDIA RTX 5060 (Dedicated)</label>
+      <label class="radio-label muted"><input type="radio" name="gpu" value="integrated"> AMD Radeon (Integrated)</label>
+    </div>
+    <div class="card flex-half">
+      <div class="card-header muted">// GLOBAL FLAGS</div>
+      <label class="check-label"><input type="checkbox" id="chk-gamemode"> Inject GameMode</label>
+      <label class="check-label"><input type="checkbox" id="chk-mangohud"> Enable MangoHud</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header muted">// POWER DYNAMICS [ TGP LIMITER ]</div>
+    <div id="power-status" class="status-large text-green">[ ECO_STEALTH ] // 45W</div>
+    <input type="range" id="power-slider" class="slider slider-green" min="0" max="3" value="0" step="1">
+    <button id="btn-apply-power" class="btn btn-outline full-width mt-10">INJECT HARDWARE LIMIT</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header muted">// DISPLAY OVERRIDE [ XRANDR ]</div>
+    <div id="bright-status" class="status-large text-cyan">[ BRIGHTNESS ] // 100%</div>
+    <input type="range" id="bright-slider" class="slider slider-cyan" min="1" max="10" value="10" step="1">
+  </div>
+
+  <div class="card">
+    <div class="card-header muted">// [ TELEMETRY ] CORE_MONITOR</div>
+    <div class="telemetry-row"><span>iGPU // AMD 780M</span><span id="amd-pct" class="text-cyan">0%</span></div>
+    <div class="progress-container"><div id="amd-bar" class="progress-bar bg-cyan"></div></div>
+    
+    <div class="telemetry-row mt-15">
+      <span>dGPU // RTX 5060 <span id="nv-stats" class="muted small-text">0°C | 0.0W</span></span>
+      <span id="nv-pct" class="text-cyan">0%</span>
+    </div>
+    <div class="progress-container"><div id="nv-bar" class="progress-bar bg-cyan"></div></div>
+  </div>
+
+  <div class="console" id="console"></div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
