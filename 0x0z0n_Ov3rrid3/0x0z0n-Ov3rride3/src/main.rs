@@ -3,7 +3,7 @@
 use std::process::Command;
 use std::fs;
 
-// [01] TELEMETRY
+// [01] TELEMETRY POLLING
 #[tauri::command]
 fn get_telemetry() -> Result<serde_json::Value, String> {
     let nv_output = Command::new("nvidia-smi")
@@ -29,6 +29,7 @@ fn get_telemetry() -> Result<serde_json::Value, String> {
     }
 
     let mut amd_usage = 0;
+    // Check common paths for AMD iGPU busy percent
     let paths = ["/sys/class/drm/card0/device/gpu_busy_percent", "/sys/class/drm/card1/device/gpu_busy_percent"];
     for path in paths {
         if let Ok(content) = fs::read_to_string(path) {
@@ -39,7 +40,7 @@ fn get_telemetry() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "nvidia": nv_data, "amd": {"usage": amd_usage} }))
 }
 
-// [02] POWER LIMITER
+// [02] HARDWARE: TGP Limiter
 #[tauri::command]
 fn set_power_limit(watts: u32) -> Result<String, String> {
     let output = Command::new("pkexec")
@@ -48,7 +49,7 @@ fn set_power_limit(watts: u32) -> Result<String, String> {
     else { Err(format!("ERR: {}", String::from_utf8_lossy(&output.stderr).trim())) }
 }
 
-// [03] DISPLAY OVERRIDE
+// [03] DISPLAY: Brightness Override
 #[tauri::command]
 fn set_brightness(level: f32) -> Result<String, String> {
     let xrandr_out = Command::new("sh").arg("-c").arg("xrandr | grep ' connected'").output().map_err(|e| e.to_string())?;
@@ -61,7 +62,7 @@ fn set_brightness(level: f32) -> Result<String, String> {
     else { Err("ERR: XRANDR INJECTION FAILED".to_string()) }
 }
 
-// [04] FILE BROWSER
+// [04] UTILITY: Browse Binary
 #[tauri::command]
 fn browse_file() -> Result<String, String> {
     let output = Command::new("zenity")
@@ -71,33 +72,37 @@ fn browse_file() -> Result<String, String> {
     else { Err("BROWSE ABORTED".to_string()) }
 }
 
-// [05] GUI LAUNCHER
+// [05] PERSISTENT NVIDIA SHELL
 #[tauri::command]
-fn launch_gui(target: &str, env_vars: &str) -> Result<String, String> {
+fn spawn_nvidia_terminal() -> Result<String, String> {
+    let env_vars = "__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia __VK_LAYER_NV_optimus=NVIDIA_only";
+    let terminal_cmd = format!("x-terminal-emulator -e bash -c \"export {}; echo '>> z0n // NVIDIA GPU ENVIRONMENT ACTIVE'; exec bash\"", env_vars);
+    Command::new("bash").arg("-c").arg(&terminal_cmd).spawn().map_err(|e| e.to_string())?;
+    Ok("SUCCESS: PERSISTENT SHELL SPAWNED".to_string())
+}
+
+// [06] EXECUTION: GUI Binary
+#[tauri::command]
+fn launch_gui(target: String, env_vars: String) -> Result<String, String> {
     let cmd = format!("{} '{}'", env_vars, target);
     Command::new("bash").arg("-c").arg(&cmd).spawn().map_err(|e| e.to_string())?;
     Ok(format!("SUCCESS: SPAWNED {}", target))
 }
 
-// [06] TERMINAL LAUNCHER
+// [07] EXECUTION: CLI Payload
 #[tauri::command]
-fn launch_cmd(payload: &str, env_vars: &str) -> Result<String, String> {
+fn launch_cmd(payload: String, env_vars: String) -> Result<String, String> {
     let inner_cmd = format!("{}{}", env_vars, payload);
     let terminal_cmd = format!("x-terminal-emulator -e bash -c \"{}; echo; echo '>> SESSION TERMINATED'; exec bash\"", inner_cmd);
     Command::new("bash").arg("-c").arg(&terminal_cmd).spawn().map_err(|e| e.to_string())?;
     Ok("SUCCESS: TERMINAL HOOK ESTABLISHED".to_string())
 }
 
-// CORE BUILDER
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            get_telemetry, 
-            set_power_limit, 
-            set_brightness, 
-            browse_file, 
-            launch_gui, 
-            launch_cmd
+            get_telemetry, set_power_limit, set_brightness, 
+            browse_file, spawn_nvidia_terminal, launch_gui, launch_cmd
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
