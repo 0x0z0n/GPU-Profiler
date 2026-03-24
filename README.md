@@ -108,6 +108,9 @@ When executing CLI-based payloads—such as **Hashcat**, **Nmap**, or custom exp
 
 The dashboard constructs a specialized execution string passed to the system's `x-terminal-emulator`. This ensures that your preferred terminal (QTerminal, XFCE4-Terminal, etc.) is used.
 
+
+![GPU](htb_System_monitor.png)
+
 **The Command Wrapper Logic:**
 
 ```bash
