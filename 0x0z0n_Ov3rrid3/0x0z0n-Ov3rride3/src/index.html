@@ -11,63 +11,88 @@
     <div class="status-online">[ SYSTEM ONLINE ]</div>
   </header>
 
-  <div class="card border-cyan">
-    <div class="card-header text-cyan">[01] GUI BINARY EXECUTION</div>
-    <div class="row">
-      <select id="app-combo" class="input-dark flex-grow"><option>None Selected</option></select>
-      <button id="btn-browse" class="btn btn-outline">BROWSE</button>
-      <button id="btn-launch-gui" class="btn btn-cyan text-black">LAUNCH BINARY</button>
+  <main>
+    <div id="ac-warning" class="warning-banner hidden">
+      [!] SYSTEM ON BATTERY - HARDWARE TGP LIMITS CLAMPED BY FIRMWARE [!]
     </div>
-  </div>
 
-  <div class="card border-crimson">
-    <div class="card-header text-crimson">[02] TERMINAL PAYLOAD</div>
-    <div class="row">
-      <input type="text" id="cmd-entry" class="input-dark flex-grow text-crimson" placeholder="Enter raw command (e.g. hashcat -I)...">
-      <button id="btn-launch-cmd" class="btn btn-crimson">OPEN TERMINAL</button>
-    </div>
-    <button id="btn-spawn-shell" class="btn btn-outline full-width mt-10 text-crimson" style="border-color: var(--crimson-neon);">SPAWN PERSISTENT NVIDIA SHELL</button>
-  </div>
+    <section class="row mb-10 profile-group">
+      <button id="btn-profile-stealth" class="btn btn-cyan text-black flex-1">STEALTH</button>
+      <button id="btn-profile-light" class="btn btn-orange flex-1">LIGHT</button>
+      <button id="btn-profile-boost" class="btn btn-crimson flex-1">BOOST</button>
+    </section>
 
-  <div class="row no-margin">
-    <div class="card flex-half">
-      <div class="card-header muted">// RENDERING ENGINE</div>
-      <label class="radio-label"><input type="radio" name="gpu" value="nvidia" checked> NVIDIA RTX 5060 (Dedicated)</label>
-      <label class="radio-label muted"><input type="radio" name="gpu" value="integrated"> AMD Radeon (Integrated)</label>
-    </div>
-    <div class="card flex-half">
-      <div class="card-header muted">// GLOBAL FLAGS</div>
-      <label class="check-label"><input type="checkbox" id="chk-gamemode"> Inject GameMode</label>
-      <label class="check-label"><input type="checkbox" id="chk-mangohud"> Enable MangoHud</label>
-    </div>
-  </div>
+    <section class="card border-cyan">
+      <div class="card-header text-cyan">[01] GUI BINARY EXECUTION</div>
+      <div class="row">
+        <select id="app-combo" class="input-dark flex-grow" aria-label="Select Target Binary"><option>None Selected</option></select>
+        <button id="btn-browse" class="btn btn-outline">BROWSE</button>
+        <button id="btn-launch-gui" class="btn btn-cyan text-black">LAUNCH BINARY</button>
+      </div>
+    </section>
 
-  <div class="card">
-    <div class="card-header muted">// POWER DYNAMICS [ TGP LIMITER ]</div>
-    <div id="power-status" class="status-large text-green">[ ECO_STEALTH ] // 45W</div>
-    <input type="range" id="power-slider" class="slider slider-green" min="0" max="3" value="0" step="1">
-    <button id="btn-apply-power" class="btn btn-outline full-width mt-10">INJECT HARDWARE LIMIT</button>
-  </div>
+    <section class="card border-crimson">
+      <div class="card-header text-crimson">[02] TERMINAL PAYLOAD</div>
+      <div class="row">
+        <input type="text" id="cmd-entry" class="input-dark flex-grow text-crimson" placeholder="Enter raw command (e.g. hashcat -I)..." aria-label="Terminal Command Input">
+        <button id="btn-launch-cmd" class="btn btn-crimson">OPEN TERMINAL</button>
+      </div>
+      <button id="btn-spawn-shell" class="btn btn-outline full-width mt-10 text-crimson">SPAWN PERSISTENT NVIDIA SHELL</button>
+    </section>
 
-  <div class="card">
-    <div class="card-header muted">// DISPLAY OVERRIDE [ XRANDR ]</div>
-    <div id="bright-status" class="status-large text-cyan">[ BRIGHTNESS ] // 100%</div>
-    <input type="range" id="bright-slider" class="slider slider-cyan" min="1" max="10" value="10" step="1">
-  </div>
+    <section class="row no-margin">
+      <div class="card flex-half">
+        <div class="card-header muted">// RENDERING ENGINE</div>
+        <label class="radio-label"><input type="radio" name="gpu" value="nvidia" checked> NVIDIA RTX 5060 (Dedicated)</label>
+        <label class="radio-label muted"><input type="radio" name="gpu" value="integrated"> AMD Radeon (Integrated)</label>
+      </div>
+      <div class="card flex-half">
+        <div class="card-header muted">// GLOBAL FLAGS</div>
+        <label class="check-label"><input type="checkbox" id="chk-gamemode"> Inject GameMode</label>
+        <label class="check-label"><input type="checkbox" id="chk-mangohud"> Enable MangoHud</label>
+      </div>
+    </section>
 
-  <div class="card">
-    <div class="card-header muted">// [ TELEMETRY ] CORE_MONITOR</div>
-    <div class="telemetry-row"><span>iGPU // AMD 780M</span><span id="amd-pct" class="text-cyan">0%</span></div>
-    <div class="progress-container"><div id="amd-bar" class="progress-bar bg-cyan"></div></div>
-    
-    <div class="telemetry-row mt-15">
-      <span>dGPU // RTX 5060 <span id="nv-stats" class="muted small-text">0°C | 0.0W</span></span>
-      <span id="nv-pct" class="text-cyan">0%</span>
-    </div>
-    <div class="progress-container"><div id="nv-bar" class="progress-bar bg-cyan"></div></div>
-  </div>
+    <section class="card">
+      <div class="card-header muted">// POWER DYNAMICS [ TGP LIMITER ]</div>
+      <div id="power-status" class="status-large text-green">[ ECO_STEALTH ] // 45W</div>
+      <input type="range" id="power-slider" class="slider slider-green" min="0" max="3" value="0" step="1" aria-label="TGP Power Limit Slider">
+      <button id="btn-apply-power" class="btn btn-outline full-width mt-10">INJECT HARDWARE LIMIT</button>
+    </section>
 
-  <div class="console" id="console"></div>
+    <section class="card">
+      <div class="card-header muted">// DISPLAY OVERRIDE [ XRANDR ]</div>
+      <div id="bright-status" class="status-large text-cyan">[ BRIGHTNESS ] // 100%</div>
+      <input type="range" id="bright-slider" class="slider slider-cyan" min="1" max="10" value="10" step="1" aria-label="Screen Brightness Slider">
+    </section>
+
+    <section class="card">
+      <div class="row cortex-header">
+        <div class="card-header muted no-margin">// [ CORTEX_EDR ] THREAT & TELEMETRY</div>
+        <div class="row no-margin">
+          <label class="check-label text-orange no-margin" style="margin-right: 15px;">
+            <input type="checkbox" id="chk-ledger"> RECORD LEDGER
+          </label>
+          <button id="btn-soc-monitor" class="btn btn-outline text-cyan border-cyan py-small">LAUNCH EXTERNAL MONITOR</button>
+        </div>
+      </div>
+
+      <div class="telemetry-row"><span>iGPU // AMD 780M</span><span id="amd-pct" class="text-cyan">0%</span></div>
+      <div class="progress-container"><div id="amd-bar" class="progress-bar bg-cyan"></div></div>
+      
+      <div class="telemetry-row mt-15">
+        <span>dGPU // RTX 5060 <span id="nv-stats" class="muted small-text">0°C | 0.0W</span></span>
+        <span id="nv-pct" class="text-cyan">0%</span>
+      </div>
+      <div class="progress-container"><div id="nv-bar" class="progress-bar bg-cyan"></div></div>
+
+      <div class="process-list mt-15" id="process-list">
+        <div class="muted small-text" style="text-align:center; padding-top: 10px;">Awaiting telemetry link...</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="console" id="console" aria-label="System Console Log"></div>
 
   <script type="module" src="/main.js"></script>
 </body>
