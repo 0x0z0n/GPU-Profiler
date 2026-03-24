@@ -14,7 +14,7 @@ sudo apt update && sudo apt install -y zenity policykit-1 mangohud gamemode && p
 
 sudo apt update && sudo apt install -y zenity policykit-1 mangohud gamemode && pip install "customtkinter>=5.2.0"
 
-![GPU](htb_UI.png)
+![GPU](htb_UI_.png)
 
 ### 1. Execution Steering Logic
 
@@ -61,7 +61,7 @@ The system invokes the `nvidia-smi` binary with specific query flags:
 `nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits`
 This returns raw integers and floats which are then mapped to the BMW M-Power circular gauges and digital readouts. The dashboard now tracks **real-time electrical draw (Wattage)** synchronously at 1000ms intervals alongside thermal and VRAM allocation metrics.
 
-![GPU](htb_TGP.png)
+![GPU](htb_TGP_.png)
 
 ### AMD Polling (iGPU)
 
@@ -77,7 +77,7 @@ The interface is built using **CustomTkinter** for high-DPI scaling and modern s
 * **Dynamic Colors:** The needle and digital readouts use a threshold logic. When utilization $>85\%$, the HEX color code shifts from **Neon Cyan** (`#3399FF`) to **M-Performance Crimson** (`#FF4400`).
 * **Native Hooks:** Uses **Zenity** (`/usr/bin/zenity`) to provide a GTK-based file manager experience, allowing for native search and autocomplete that standard Python dialogs lack.
 
-![GPU](htb_UI.png)
+![GPU](htb_UI_.png)
 
 # System Integration: File Management & Terminal Logic
 
@@ -87,7 +87,7 @@ The **z0n GPU Profiler** is engineered to behave as a native extension of the Ka
 
 Standard Python file dialogs (`tkinter.filedialog`) are often functionally "blind"—they lack the indexing, search, and navigation capabilities required for rapid binary selection in a complex filesystem. This project bypasses those limitations by utilizing a **Zenity-driven GTK interface**.
 
-![GPU](htb_File_manger.png)
+![GPU](htb_File_manger_.png)
 
 ### Key Capabilities:
 
@@ -102,7 +102,7 @@ Standard Python file dialogs (`tkinter.filedialog`) are often functionally "blin
 
 When executing CLI-based payloads—such as **Hashcat**, **Nmap**, or custom exploitation scripts—visual feedback and log persistence are mandatory. The **Terminal Override** module ensures that no output is lost, even if a process terminates abruptly.
 
-![GPU](htb_CMD.png)
+![GPU](htb_CMD_.png)
 
 ### Technical Implementation:
 
